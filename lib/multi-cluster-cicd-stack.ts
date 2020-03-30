@@ -29,8 +29,8 @@ export class MultiClusterCicdStack extends cdk.Stack {
             build: {
               commands: [
 
-                'export AWS_ACCESS_KEY_ID=AKIA4S4PRGWIASFYSC6G',
-                'export AWS_SECRET_ACCESS_KEY=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',
+                'export AWS_ACCESS_KEY_ID=xx',
+                'export AWS_SECRET_ACCESS_KEY=xx',
 
                 `for i in "$(cdk list)"; do cdk deploy $i --require-approval never; done`
                 //`arr=($(cdk list | tr "\n" " "))`, 
