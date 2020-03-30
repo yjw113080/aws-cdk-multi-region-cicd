@@ -10,25 +10,31 @@ export class MultiClusterCicdStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const repoForCDK = new codecommit.Repository(this, 'repo-for-cdk', {
-      repositoryName: 'repo-for-cdk'
+    const repoForCDK = new codecommit.Repository(this, 'cdk-repo', {
+      repositoryName: 'cdk-repo'
     });
 
     const sourceOutput = new codepipeline.Artifact();
     const buildForCDK = new codebuild.PipelineProject(this, 'build-for-cdk', {
       environment: {
-        buildImage: codebuild.LinuxBuildImage.UBUNTU_14_04_NODEJS_10_14_1
+        buildImage: codebuild.LinuxBuildImage.UBUNTU_14_04_NODEJS_10_14_1,
+        privileged: true
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: "0.2",
         phases: {
             pre_build: {
-                commands: [ `npm i -g aws-cdk`, `npm i` ]
+                commands: [ `npm i -g aws-cdk`, `npm i`, `npm run-script build` ]
             },
             build: {
               commands: [
-                `arr=$(cdk list)`,
-                'for i in "${arr[@]}"; do cdk deploy $i --require-approval never; done'
+
+                'export AWS_ACCESS_KEY_ID=AKIA4S4PRGWIASFYSC6G',
+                'export AWS_SECRET_ACCESS_KEY=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',
+
+                `for i in "$(cdk list)"; do cdk deploy $i --require-approval never; done`
+                //`arr=($(cdk list | tr "\n" " "))`, 
+                //'for i in "${arr[@]}"; do cdk deploy $i --require-approval never; done'
               ]
             }
           }
