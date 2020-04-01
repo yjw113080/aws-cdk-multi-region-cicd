@@ -5,14 +5,24 @@ import codebuild = require('@aws-cdk/aws-codebuild');
 import codepipeline = require('@aws-cdk/aws-codepipeline');
 import pipelineAction = require('@aws-cdk/aws-codepipeline-actions');
 import * as iam from '@aws-cdk/aws-iam';
+import * as secretsmanager from '@aws-cdk/aws-secretsmanager';
+import { AccountRootPrincipal } from '@aws-cdk/aws-iam';
 
 export class MultiClusterCicdStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+ 
+
     const repoForCDK = new codecommit.Repository(this, 'cdk-repo', {
       repositoryName: 'cdk-repo'
     });
+
+    
+    const roleToAssume = new iam.Role(this, `role-to-assume`, {
+      assumedBy: new iam.AccountRootPrincipal()
+    });
+    roleToAssume.addToPolicy(new iam.PolicyStatement({ actions: [`*`], resources: [`*`]}));
 
     const sourceOutput = new codepipeline.Artifact();
     const buildForCDK = new codebuild.PipelineProject(this, 'build-for-cdk', {
@@ -29,21 +39,25 @@ export class MultiClusterCicdStack extends cdk.Stack {
             build: {
               commands: [
 
-                'export AWS_ACCESS_KEY_ID=xx',
-                'export AWS_SECRET_ACCESS_KEY=xx',
+                `CREDENTIALS=$(aws sts assume-role --role-arn "${roleToAssume.roleArn}" --role-session-name codebuild-cdk)`,
+                `export AWS_ACCESS_KEY_ID="$(echo \${CREDENTIALS} | jq -r '.Credentials.AccessKeyId')"`,
+                `export AWS_SECRET_ACCESS_KEY="$(echo \${CREDENTIALS} | jq -r '.Credentials.SecretAccessKey')"`,
+                `export AWS_SESSION_TOKEN="$(echo \${CREDENTIALS} | jq -r '.Credentials.SessionToken')"`,
+                `export AWS_EXPIRATION=$(echo \${CREDENTIALS} | jq -r '.Credentials.Expiration')`,
 
                 `for i in "$(cdk list)"; do cdk deploy $i --require-approval never; done`
-                //`arr=($(cdk list | tr "\n" " "))`, 
-                //'for i in "${arr[@]}"; do cdk deploy $i --require-approval never; done'
+
               ]
             }
           }
       })
     });
+
     buildForCDK.addToRolePolicy(new iam.PolicyStatement({
-      actions: [`*`],
-      resources: [`*`]
+      actions: [`sts:AssumeRole`],
+      resources: [roleToAssume.roleArn]
     }));
+    
 
     const pipelineForCDK = new codepipeline.Pipeline(this, 'pipeline-for-cdk', {
       stages: [
@@ -65,6 +79,7 @@ export class MultiClusterCicdStack extends cdk.Stack {
         }
       ]
     })
+
 
   }
 }
