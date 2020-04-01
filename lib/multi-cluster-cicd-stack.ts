@@ -5,24 +5,20 @@ import codebuild = require('@aws-cdk/aws-codebuild');
 import codepipeline = require('@aws-cdk/aws-codepipeline');
 import pipelineAction = require('@aws-cdk/aws-codepipeline-actions');
 import * as iam from '@aws-cdk/aws-iam';
-import * as secretsmanager from '@aws-cdk/aws-secretsmanager';
-import { AccountRootPrincipal } from '@aws-cdk/aws-iam';
 
 export class MultiClusterCicdStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
- 
-
     const repoForCDK = new codecommit.Repository(this, 'cdk-repo', {
       repositoryName: 'cdk-repo'
     });
-
     
     const roleToAssume = new iam.Role(this, `role-to-assume`, {
       assumedBy: new iam.AccountRootPrincipal()
     });
     roleToAssume.addToPolicy(new iam.PolicyStatement({ actions: [`*`], resources: [`*`]}));
+
 
     const sourceOutput = new codepipeline.Artifact();
     const buildForCDK = new codebuild.PipelineProject(this, 'build-for-cdk', {
