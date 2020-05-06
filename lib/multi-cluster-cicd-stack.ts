@@ -51,7 +51,6 @@ export class MultiClusterCicdStack extends cdk.Stack {
     
     const sourceOutput = new codepipeline.Artifact();
 
-
     const pipelineForCDK = new codepipeline.Pipeline(this, 'pipeline-for-cdk', {
       stages: [
         {
